@@ -45,6 +45,7 @@ def build_agent_options(can_use_tool=check_tool_permission) -> ClaudeAgentOption
         permission_mode="default",
         hooks=get_agent_hooks(),
         agents=get_agent_definitions(),
+        setting_sources=["project"],
         env=_get_sdk_env(),
     )
 
