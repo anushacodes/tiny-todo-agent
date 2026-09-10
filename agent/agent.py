@@ -6,7 +6,9 @@ import os
 from claude_agent_sdk import AssistantMessage, ClaudeAgentOptions, ClaudeSDKClient, ResultMessage, TextBlock
 from dotenv import load_dotenv
 
+from agent.hooks import get_agent_hooks
 from agent.permissions import check_tool_permission
+from agent.subagents import get_agent_definitions
 from agent.tools import create_todo_tools_server
 
 load_dotenv()
@@ -37,11 +39,13 @@ def build_agent_options(can_use_tool=check_tool_permission) -> ClaudeAgentOption
         system_prompt=(
             "You are a friendly todo assistant. Help the user inspect, modify, and reason "
             "about tasks using the todo tools. Always use the right tool for add/list/complete/delete. "
-            "Keep responses concise."
+            "Delegate prioritization questions to the 'prioritizer' subagent. Keep responses concise."
         ),
         mcp_servers={"todo-tools": create_todo_tools_server()},
         can_use_tool=can_use_tool,
         permission_mode="default",
+        hooks=get_agent_hooks(),
+        agents=get_agent_definitions(),
         env=_get_sdk_env(),
     )
 
