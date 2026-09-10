@@ -9,7 +9,6 @@ from dotenv import load_dotenv
 from agent.hooks import get_agent_hooks
 from agent.permissions import check_tool_permission
 from agent.subagents import get_agent_definitions
-from agent.tools import create_todo_tools_server
 
 load_dotenv()
 
@@ -41,7 +40,7 @@ def build_agent_options(can_use_tool=check_tool_permission) -> ClaudeAgentOption
             "about tasks using the todo tools. Always use the right tool for add/list/complete/delete. "
             "Delegate prioritization questions to the 'prioritizer' subagent. Keep responses concise."
         ),
-        mcp_servers={"todo-tools": create_todo_tools_server()},
+        mcp_servers={"todo-server": {"type": "stdio", "command": "uv", "args": ["run", "python", "mcp_server.py"]}},
         can_use_tool=can_use_tool,
         permission_mode="default",
         hooks=get_agent_hooks(),
