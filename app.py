@@ -2,17 +2,30 @@
 
 This module provides data models, file storage operations, and the agent
 runtime loop for inspecting, modifying, and reasoning about tasks.
+This module provides data models, file storage operations, tool definitions,
+and an interactive REPL loop using the Claude Agent SDK.
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal, TypedDict
 
 from claude_agent_sdk import create_sdk_mcp_server, tool
+from claude_agent_sdk import (
+    AssistantMessage,
+    ClaudeAgentOptions,
+    ClaudeSDKClient,
+    ResultMessage,
+    TextBlock,
+    create_sdk_mcp_server,
+    tool,
+)
 from claude_agent_sdk.types import McpSdkServerConfig
 from dotenv import load_dotenv
 
@@ -21,6 +34,27 @@ load_dotenv()
 
 # constants
 TODOS_FILE: Path = Path(os.getenv("TODOS_FILE_PATH", "todos.json"))
+DEFAULT_MODEL: str = os.getenv("MODEL_NAME", "claude-3-5-sonnet-20241022")
+
+
+# environment configuration helper
+def _get_sdk_env() -> dict[str, str]:
+    """Build subprocess environment dictionary for Claude Agent SDK."""
+    env_vars: dict[str, str] = {}
+    openrouter_key = os.getenv("OPENROUTER_API_KEY", "")
+    anthropic_base_url = os.getenv("ANTHROPIC_BASE_URL", "")
+    anthropic_key = os.getenv("ANTHROPIC_API_KEY", "")
+
+    if openrouter_key or "openrouter.ai" in anthropic_base_url:
+        env_vars["ANTHROPIC_BASE_URL"] = anthropic_base_url or "https://openrouter.ai/api"
+        env_vars["ANTHROPIC_AUTH_TOKEN"] = openrouter_key
+        env_vars["ANTHROPIC_API_KEY"] = ""
+    elif anthropic_key:
+        env_vars["ANTHROPIC_API_KEY"] = anthropic_key
+        if anthropic_base_url:
+            env_vars["ANTHROPIC_BASE_URL"] = anthropic_base_url
+
+    return env_vars
 
 
 # todo schema
@@ -251,16 +285,39 @@ def create_todo_tools_server() -> McpSdkServerConfig:
 
 if __name__ == "__main__":
     import asyncio
+# agent configuration
+def build_agent_options() -> ClaudeAgentOptions:
+    """Construct options for the Claude Agent SDK."""
+    tools_server = create_todo_tools_server()
+    allowed_tools = [
+        "mcp__todo-tools__list_todos",
+        "mcp__todo-tools__add_todo",
+        "mcp__todo-tools__complete_todo",
+        "mcp__todo-tools__delete_todo",
+    ]
 
     async def _test_tools() -> None:
         print("Testing tools directly...")
         # test adding
         add_res = await add_todo.handler({"title": "learn Redis", "priority": "high"})
         print("add_todo:", add_res["content"][0]["text"])
+    system_prompt = (
+        "You are a friendly personal todo assistant. You help the user inspect, "
+        "modify, and reason about their tasks using the provided todo tools. "
+        "Always use the appropriate todo tool when the user asks to add, list, "
+        "complete, or delete tasks. Keep responses concise, helpful, and direct."
+    )
 
         # test listing
         list_res = await list_todos.handler({})
         print("list_todos:", list_res["content"][0]["text"])
+    return ClaudeAgentOptions(
+        model=DEFAULT_MODEL,
+        system_prompt=system_prompt,
+        mcp_servers={"todo-tools": tools_server},
+        allowed_tools=allowed_tools,
+        env=_get_sdk_env(),
+    )
 
         # test completing
         comp_res = await complete_todo.handler({"id": 1})
@@ -269,9 +326,52 @@ if __name__ == "__main__":
         # test deleting
         del_res = await delete_todo.handler({"id": 1})
         print("delete_todo:", del_res["content"][0]["text"])
+# interactive cli loop
+async def run_cli() -> None:
+    """Run the interactive CLI session."""
+    print("=" * 60)
+    print("🧸 Tiny Todo Agent (Claude Agent SDK)")
+    print("Type a request (e.g. 'Add learn Redis', 'List my todos')")
+    print("Type 'exit' or 'quit' to close.")
+    print("=" * 60)
 
         # verify server creation
         server = create_todo_tools_server()
         print(f"Created MCP server: {server['name']}")
+    options = build_agent_options()
 
     asyncio.run(_test_tools())
+    try:
+        async with ClaudeSDKClient(options=options) as client:
+            while True:
+                try:
+                    user_input = await asyncio.to_thread(input, "\n> ")
+                except (EOFError, KeyboardInterrupt):
+                    print("\nGoodbye!")
+                    break
+
+                prompt = user_input.strip()
+                if not prompt:
+                    continue
+                if prompt.lower() in ("exit", "quit"):
+                    print("Goodbye!")
+                    break
+
+                try:
+                    await client.query(prompt)
+                    async for message in client.receive_response():
+                        if isinstance(message, AssistantMessage):
+                            for block in message.content:
+                                if isinstance(block, TextBlock):
+                                    print(f"\n{block.text}")
+                        elif isinstance(message, ResultMessage):
+                            if message.is_error and message.result:
+                                print(f"\n[Agent Error]: {message.result}")
+                except Exception as exc:
+                    print(f"\n[Error during query]: {exc}")
+    except Exception as exc:
+        print(f"\nFailed to initialize Claude Agent SDK: {exc}")
+
+
+if __name__ == "__main__":
+    asyncio.run(run_cli())
