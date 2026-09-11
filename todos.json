@@ -1,3 +1,11 @@
 {
-  "todos": []
+  "todos": [
+    {
+      "id": 1,
+      "title": "Learn Claude SDK better to contribute to the project",
+      "status": "pending",
+      "priority": "high",
+      "created_at": "2026-09-11T23:53:24.098066+00:00"
+    }
+  ]
 }

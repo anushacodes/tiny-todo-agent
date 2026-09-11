@@ -17,13 +17,22 @@ def _log(msg: str) -> None:
         f.write(f"[{ts}] {msg}\n")
 
 
+from agent.ui import print_tool_call, print_tool_result
+
+
 async def pre_tool_hook(hook_input, tool_use_id: str | None, context: HookContext) -> SyncHookJSONOutput:
-    _log(f"[PreToolUse] {hook_input.get('tool_name')} {hook_input.get('tool_input')}")
+    tool_name = hook_input.get("tool_name", "")
+    tool_input_data = hook_input.get("tool_input", {})
+    _log(f"[PreToolUse] {tool_name} {tool_input_data}")
+    print_tool_call(tool_name, tool_input_data)
     return {}
 
 
 async def post_tool_hook(hook_input, tool_use_id: str | None, context: HookContext) -> SyncHookJSONOutput:
-    _log(f"[PostToolUse] {hook_input.get('tool_name')} -> {hook_input.get('tool_response')}")
+    tool_name = hook_input.get("tool_name", "")
+    tool_response = hook_input.get("tool_response")
+    _log(f"[PostToolUse] {tool_name} -> {tool_response}")
+    print_tool_result(tool_name, tool_response)
     return {}
 
 
