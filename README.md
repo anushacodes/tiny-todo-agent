@@ -2,11 +2,7 @@
 
 > **A charming, autonomous task companion built with the Claude Agent SDK & Model Context Protocol (MCP)**
 
-```text
-  (\_/)        T I N Y   T O D O   A G E N T  ✨
-  ( •.•)       Powered by Claude Agent SDK 💖
- c(")(")      Autonomous • Safe • Extensible • Modular
-```
+![Tiny Todo Agent UI](ui.png)
 
 ---
 
@@ -18,15 +14,13 @@
 
 ## 🌟 Key Features
 
-- 🐾 **Delightful Terminal UI:** Styled with `rich`, featuring our bunny mascot, visual inspection cards for tool calls (`⚙️`) and subagents (`🧠`), and clean task tables with color-coded priority badges and strikethroughs for finished items.
+- 🐾 ** Terminal UI:** Styled with `rich`, featuring our bunny mascot, visual inspection cards for tool calls (`⚙️`) and subagents (`🧠`), and clean task tables with color-coded priority badges and strikethroughs for finished items.
 - ⚙️ **Decoupled MCP Architecture:** Runs a dedicated stdio MCP server (`todo-server`) so disk storage (`todos.json`) remains completely independent from AI reasoning.
 - 🧠 **Smart Subagent Delegation:** Hands off task prioritization to a specialized `prioritizer` subagent. It has read-only access to inspect your backlog and recommend what to tackle next.
 - 🛡️ **Smooth, Sensible Safety:**
   - **Auto-approved:** Safe actions like listing tasks (`list_todos`), creating new ones (`add_todo`), and marking items done (`complete_todo`) run immediately without nagging prompts.
   - **Guarded:** Only permanent deletions (`delete_todo`) ask for confirmation. It understands natural replies (`yep`, `sure`, `ok`) and lets you type **`all`** to approve batch deletions at once.
-- ⚡ **Fast & Free Inference Options:**
-  - **Groq LPU Engine:** Instantaneous ~300ms responses (`llama-3.3-70b-versatile`) with zero thinking lag.
-  - **Flexible Fallbacks:** Ready to use with OpenRouter's free tier or your official Anthropic API key.
+
 - 📚 **Skills & Quick Shortcuts:** Comes with project skills (`todo-management`), fast slash commands (`/todos`, `/prioritize`), and an instant offline guide (`help`).
 - 🔄 **Seamless Session Resumption:** Automatically tracks conversation state so you can close your terminal anytime and resume right where you left off using `--resume`.
 - 🔍 **Audit Logging:** Records every tool call and result with UTC timestamps in `agent.log` for complete transparency.
